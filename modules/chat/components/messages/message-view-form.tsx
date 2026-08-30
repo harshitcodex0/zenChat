@@ -39,6 +39,10 @@ import {
 import { toast } from "sonner";
 
 
+import { CopyIcon, EditIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PromptInputProvider, usePromptInputController } from "@/components/ai-elements/prompt-input";
+
 type DBMessage = {
     id: string;
     content: string;
@@ -52,8 +56,7 @@ type MessagePartShape = {
     [key: string]: unknown;
 };
 
-
-function parseMessageToUI(msg) {
+function parseMessageToUI(msg: any) {
     const basePart = { type: "text", text: msg.content };
 
     try {
@@ -82,6 +85,20 @@ function MessagePart({ part, messageId, partIndex, role , isStreaming }:{
     isStreaming: boolean;
 }) {
     const key = `${messageId}-${partIndex}`;
+    const { textInput } = usePromptInputController();
+
+    const handleCopy = () => {
+        if (part.text) {
+            navigator.clipboard.writeText(part.text);
+            toast.success("Copied to clipboard");
+        }
+    };
+
+    const handleEdit = () => {
+        if (part.text) {
+            textInput.setInput(part.text);
+        }
+    };
 
     if (part.type === "text") {
         return (
@@ -89,6 +106,16 @@ function MessagePart({ part, messageId, partIndex, role , isStreaming }:{
                 <MessageContent>
                     <MessageResponse>{part.text}</MessageResponse>
                 </MessageContent>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" onClick={handleCopy} className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground" title="Copy text">
+                        <CopyIcon className="w-3 h-3" />
+                    </Button>
+                    {role === "user" && (
+                        <Button variant="ghost" size="icon" onClick={handleEdit} className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground" title="Edit question">
+                            <EditIcon className="w-3 h-3" />
+                        </Button>
+                    )}
+                </div>
             </Message>
         );
     }
@@ -122,8 +149,6 @@ function MessagePart({ part, messageId, partIndex, role , isStreaming }:{
 export const MessageViewWithForm = ({ chatId }: {chatId:string}) => {
     const {data:chatData , isPending} = useGetChatById(chatId);
 
-    console.log(chatData)
-
     if(isPending){
         return (
             <div className="flex items-center justify-center h-full">
@@ -141,7 +166,7 @@ export const MessageViewWithForm = ({ chatId }: {chatId:string}) => {
     }
 
     const rawMessages = (chatData.data.messages ?? [])
-    const initialMessages:UIMessage[] = rawMessages.filter((m)=>m?.id && m?.content?.trim())
+    const initialMessages:UIMessage[] = rawMessages.filter((m: any)=>m?.id && m?.content?.trim())
         .map(parseMessageToUI);
 
     return (
@@ -250,14 +275,15 @@ const ChatView = ({
                 }
             )
         } catch (error) {
-            console.error("Send message failed:", err);
+            console.error("Send message failed:", error);
             toast.error("Failed to send message");
         }
     }
 
 
     return (
-        <div className="max-w-4xl mx-auto p-6 relative size-full h-[calc(100vh-4rem)]">
+        <PromptInputProvider>
+            <div className="max-w-4xl mx-auto p-6 relative size-full h-[calc(100vh-4rem)]">
             <div className="flex flex-col h-full">
                 <Conversation className="h-full">
                     <ConversationContent>
@@ -331,5 +357,6 @@ const ChatView = ({
                 </PromptInput>
             </div>
         </div>
+        </PromptInputProvider>
     )
 }

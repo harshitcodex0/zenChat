@@ -34,7 +34,9 @@ export const useCreateChat = () => {
         onSuccess: (res: any) => {
             if(res.success && res.data){
                 queryClient.invalidateQueries({queryKey:["chats"]});
-                router.push(`/chat/${res.data.id}?autoTrigger=true`)
+                setTimeout(() => {
+                    router.push(`/chat/${res.data.id}?autoTrigger=true`);
+                }, 50);
             }
         },
         onError: (error: Error) => {
