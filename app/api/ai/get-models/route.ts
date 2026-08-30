@@ -2,31 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
     try {
-        const response = await fetch("https://openrouter.ai/api/v1/models", {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                "Content-Type": "application/json",
-            },
-        });
+        // Fetch all models available through OpenRouter.
+        const response = await fetch(
+            "https://openrouter.ai/api/v1/models",
+            {
+                method: "GET",
+                headers: {
+                    // Your OpenRouter API key.
+                    Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
 
+                    // Tell OpenRouter that we are working with JSON.
+                    "Content-Type": "application/json",
+                },
+            },
+        );
+
+        // Check whether OpenRouter returned a successful response.
         if (!response.ok) {
+            const errorText = await response.text();
+
+            console.error("OpenRouter API error:", errorText);
+
             return NextResponse.json(
-                { message: "Openrouter api error" },
-                { status: 500 },
+                {
+                    success: false,
+                    message: "OpenRouter API error",
+                    error: errorText,
+                },
+                {
+                    status: response.status,
+                },
             );
         }
 
+        // Convert the response body into a JavaScript object.
         const data = await response.json();
 
-        const freeModels = data.data.filter((model) => {
-            const promptPrice = parseFloat(model.pricing?.prompt || "0");
-            const completionPrice = parseFloat(model.pricing?.completion || "0");
-
-            return promptPrice === 0 && completionPrice === 0;
-        });
-
-        const formattedModels = freeModels.map((model) => ({
+        // Return ALL models.
+        // There is no filter for free/paid models here.
+        const formattedModels = data.data.map((model: any) => ({
             id: model.id,
             name: model.name,
             description: model.description,
@@ -36,18 +50,27 @@ export async function GET(request: NextRequest) {
             top_provider: model.top_provider,
         }));
 
+        // Send the models to your frontend.
         return NextResponse.json({
+            success: true,
             models: formattedModels,
+            count: formattedModels.length,
         });
     } catch (error) {
-        console.error("Error fetching free models:", error);
+        // Handle unexpected errors.
+        console.error("Error fetching OpenRouter models:", error);
 
         return NextResponse.json(
             {
                 success: false,
-                error: (error as Error).message || "Failed to fetch free models",
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to fetch OpenRouter models",
             },
-            { status: 500 },
+            {
+                status: 500,
+            },
         );
     }
 }
