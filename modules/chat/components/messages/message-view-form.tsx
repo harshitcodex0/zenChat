@@ -20,11 +20,11 @@ import {
 import {
     Conversation,
     ConversationContent,
-    ConversationDownload,
     ConversationEmptyState,
     ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 
+import { CharacterAvatar } from "@/components/character-avatar";
 import { ModelSelector } from "../chat-view/model-selector";
 import {
     Message,
@@ -43,34 +43,28 @@ import { CopyIcon, EditIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PromptInputProvider, usePromptInputController } from "@/components/ai-elements/prompt-input";
 
-type DBMessage = {
-    id: string;
-    content: string;
-    messageRole: "USER" | "ASSISTANT";
-    createdAt: string | Date;
-};
-
 type MessagePartShape = {
     type: string;
     text?: string;
     [key: string]: unknown;
 };
 
-function parseMessageToUI(msg: any) {
+function parseMessageToUI(msg: { id: string, content: string, messageRole: string, createdAt: string | Date }) {
     const basePart = { type: "text", text: msg.content };
+    const role = msg.messageRole.toLowerCase() as "user" | "assistant";
 
     try {
         const parts = JSON.parse(msg.content);
         return {
             id: msg.id,
-            role: msg.messageRole.toLowerCase(),
+            role,
             parts: Array.isArray(parts) ? parts : [basePart],
             createdAt: msg.createdAt,
         };
     } catch {
         return {
             id: msg.id,
-            role: msg.messageRole.toLowerCase(),
+            role,
             parts: [basePart],
             createdAt: msg.createdAt,
         };
@@ -166,14 +160,15 @@ export const MessageViewWithForm = ({ chatId }: {chatId:string}) => {
     }
 
     const rawMessages = (chatData.data.messages ?? [])
-    const initialMessages:UIMessage[] = rawMessages.filter((m: any)=>m?.id && m?.content?.trim())
-        .map(parseMessageToUI);
+    const initialMessages:UIMessage[] = rawMessages.filter((m: { id?: string, content?: string, messageRole: string, createdAt: string | Date })=>m?.id && m?.content?.trim())
+        .map(m => parseMessageToUI(m as { id: string, content: string, messageRole: string, createdAt: string | Date }));
 
     return (
         <ChatView
             chatId={chatId}
             initialMessages={initialMessages}
             initialModel={chatData.data.model}
+            character={chatData.data.character}
         />
     )
 };
@@ -182,10 +177,12 @@ const ChatView = ({
                       chatId,
                       initialMessages,
                       initialModel,
+                      character
                   }:{
     chatId: string;
     initialMessages: UIMessage[];
     initialModel: string | null;
+    character: any;
 })=>{
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -285,6 +282,18 @@ const ChatView = ({
         <PromptInputProvider>
             <div className="max-w-4xl mx-auto p-6 relative size-full h-[calc(100vh-4rem)]">
             <div className="flex flex-col h-full">
+                
+                {/* Character Header */}
+                {character && (
+                    <div className="flex items-center gap-3 pb-4 mb-4 border-b">
+                        <CharacterAvatar name={character.name} src={character.avatar} size="lg" />
+                        <div>
+                            <h2 className="font-semibold text-lg">{character.name}</h2>
+                            <p className="text-sm text-muted-foreground">{character.description}</p>
+                        </div>
+                    </div>
+                )}
+
                 <Conversation className="h-full">
                     <ConversationContent>
                         {messages.length === 0 ? (

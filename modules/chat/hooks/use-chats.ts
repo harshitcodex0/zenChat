@@ -31,11 +31,11 @@ export const useCreateChat = () => {
 
     return useMutation({
         mutationFn: createChatWithMessage,
-        onSuccess: (res: any) => {
-            if(res.success && res.data){
+        onSuccess: (res: { success?: boolean, data?: { id: string } }) => {
+            if(res.success && res.data && res.data.id){
                 queryClient.invalidateQueries({queryKey:["chats"]});
                 setTimeout(() => {
-                    router.push(`/chat/${res.data.id}?autoTrigger=true`);
+                    if (res.data) router.push(`/chat/${res.data.id}?autoTrigger=true`);
                 }, 50);
             }
         },
@@ -48,7 +48,6 @@ export const useCreateChat = () => {
 
 export const useDeleteChat = (chatId:string) => {
     const queryClient = useQueryClient();
-    const router = useRouter();
 
     return useMutation({
         mutationFn: () => deleteChat(chatId),

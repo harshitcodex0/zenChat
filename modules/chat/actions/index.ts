@@ -2,17 +2,20 @@
 import { prisma } from "@/lib/db";
 import { MessageRole, MessageType } from "@/lib/generated/prisma/enums";
 import { currentUser } from "@/modules/authentication/actions";
-import { success } from "better-auth";
 import { revalidatePath } from "next/cache";
 
 interface IcreateChatWithMessage {
     content: string;
     model: string;
+    characterId?: string;
+    knowledgeCollectionId?: string;
 }
 
 export async function createChatWithMessage({
                                                 content,
                                                 model,
+                                                characterId,
+                                                knowledgeCollectionId,
                                             }: IcreateChatWithMessage) {
     try {
         const user = await currentUser();
@@ -27,7 +30,11 @@ export async function createChatWithMessage({
             data: {
                 title,
                 model,
-                userId: user?.id,
+                userId: user.id,
+                characterId: characterId || null,
+                knowledgeCollections: knowledgeCollectionId ? {
+                    connect: { id: knowledgeCollectionId }
+                } : undefined,
                 messages: {
                     create: {
                         content,
@@ -39,6 +46,8 @@ export async function createChatWithMessage({
             },
             include: {
                 messages: true,
+                character: true,
+                knowledgeCollections: true,
             },
         });
 
@@ -59,8 +68,8 @@ export async function getAllChats() {
         }
 
         const chats = await prisma.chat.findMany({
-            where: { userId: user?.id },
-            include: { messages: true },
+            where: { userId: user.id },
+            include: { messages: true, character: true },
             orderBy: { createdAt: "desc" },
         });
         return { success: true, data: chats };
@@ -79,8 +88,8 @@ export async function getChatById(chatId: string) {
         }
 
         const chat = await prisma.chat.findUnique({
-            where: { id: chatId, userId: user?.id },
-            include: { messages: true },
+            where: { id: chatId, userId: user.id },
+            include: { messages: true, character: true },
         });
 
         return { success: true, data: chat };

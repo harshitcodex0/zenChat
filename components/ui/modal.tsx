@@ -21,9 +21,21 @@ const Modal= ({
                   submitText = 'Submit',
                   cancelText = 'Cancel',
                   showFooter = true,
-                  submitVariant = "default",
-                  size,
+                  size = "sm:max-w-[425px]",
                   className = ''
+              }: {
+                  children?: React.ReactNode;
+                  title?: string;
+                  description?: string;
+                  isOpen: boolean;
+                  onClose: () => void;
+                  onSubmit?: () => void;
+                  submitText?: string;
+                  cancelText?: string;
+                  showFooter?: boolean;
+                  size?: string;
+                  submitVariant?: string;
+                  className?: string;
               }) => {
     const handleSubmit = () => {
         if (onSubmit) {

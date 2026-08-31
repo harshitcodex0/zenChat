@@ -1,7 +1,8 @@
 import { convertToModelMessages, streamText , createIdGenerator , type UIMessage } from "ai";
-import { CHAT_SYSTEM_PROMPT } from "@/lib/prompt";
+import { generateSystemPrompt } from "@/lib/prompt";
 import { prisma } from "@/lib/db";
 import { MessageRole } from "@/lib/generated/prisma/enums";
+import { currentUser } from "@/modules/authentication/actions";
 
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { NextRequest } from "next/server";
@@ -9,32 +10,6 @@ import { NextRequest } from "next/server";
 const openRouter = createOpenRouter({
     apiKey: process.env.OPENROUTER_API_KEY!,
 });
-
-/**
- * Convert DB message to UI format for AI SDK
- */
-function dbMessageToUI(msg) {
-    try {
-        const parts = JSON.parse(msg.content);
-        const textParts = parts.filter((p) => p.type === "text");
-
-        if (textParts.length === 0) return null;
-
-        return {
-            id: msg.id,
-            role: msg.messageRole.toLowerCase(),
-            parts: textParts,
-            createdAt: msg.createdAt,
-        };
-    } catch {
-        return {
-            id: msg.id,
-            role: msg.messageRole.toLowerCase(),
-            parts: [{ type: "text", text: msg.content }],
-            createdAt: msg.createdAt,
-        };
-    }
-}
 
 const generateMessageId = createIdGenerator({prefix:"msg" , size:16})
 
@@ -52,6 +27,11 @@ function partsToJSON(message: { parts?: unknown; content?: string }) {
 
 export async function POST(req: NextRequest) {
     try {
+        const user = await currentUser();
+        if (!user) {
+            return Response.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const {
             chatId,
             messages,
@@ -59,11 +39,62 @@ export async function POST(req: NextRequest) {
             skipUserMessage,
         } = await req.json();
 
+        const chat = await prisma.chat.findUnique({
+            where: { id: chatId, userId: user.id },
+            include: { 
+                character: {
+                    include: { knowledgeCollections: { select: { id: true } } }
+                },
+                knowledgeCollections: { select: { id: true } }
+            }
+        });
 
+        if (!chat) {
+            return Response.json({ error: "Chat not found" }, { status: 404 });
+        }
+
+        let systemPrompt = generateSystemPrompt(chat.character);
+
+        // --- RAG RETRIEVAL ---
+        const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+        
+        if (lastUserMsg && lastUserMsg.content) {
+            const collectionIds = [
+                ...chat.knowledgeCollections.map(c => c.id),
+                ...(chat.character?.knowledgeCollections?.map(c => c.id) || [])
+            ];
+
+            if (collectionIds.length > 0) {
+                // Perform Vector Search
+                const { searchKnowledge } = await import('@/modules/knowledge/services/retrieval');
+                try {
+                    let userQuery = lastUserMsg.content;
+                    if (Array.isArray(userQuery)) {
+                        userQuery = userQuery.map(u => u.text || "").join(" ");
+                    }
+                    
+                    const chunks = await searchKnowledge(userQuery, {
+                        userId: user.id,
+                        collectionIds,
+                        topK: 5
+                    });
+
+                    if (chunks.length > 0) {
+                        const contextString = chunks.map((c, i) => `[Source ${i + 1}: ${c.documentTitle}]\n${c.content}\n`).join("\n");
+                        const { appendKnowledgeContext } = await import('@/lib/prompt');
+                        systemPrompt = appendKnowledgeContext(systemPrompt, contextString);
+                    }
+                } catch (error) {
+                    console.error("RAG Retrieval error:", error);
+                    // Non-fatal, continue with generation without context
+                }
+            }
+        }
+        // ---------------------
 
         const result = streamText({
             model: openRouter.chat(model),
-            system: CHAT_SYSTEM_PROMPT,
+            system: systemPrompt,
             messages: await convertToModelMessages(messages),
         });
 

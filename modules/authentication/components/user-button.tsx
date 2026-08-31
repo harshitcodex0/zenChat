@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, LogOut, Settings, CreditCard, User as UserIcon } from "lucide-react";
+import { LogOut, Settings, CreditCard, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     DropdownMenu,
@@ -19,9 +19,21 @@ import { useRouter } from "next/navigation";
 
 
 
+interface UserButtonProps {
+    user: { name?: string; email: string; image?: string; createdAt: Date | string; [key: string]: unknown } | null;
+    onSettings?: () => void;
+    onProfile?: () => void;
+    onBilling?: () => void;
+    showBadge?: boolean;
+    badgeText?: string;
+    badgeVariant?: "default" | "secondary" | "destructive" | "outline";
+    size?: "sm" | "md" | "lg";
+    showEmail?: boolean;
+    showMemberSince?: boolean;
+}
+
 export default function UserButton({
                                        user,
-                                       onLogout,
                                        onSettings,
                                        onProfile,
                                        onBilling,
@@ -31,7 +43,7 @@ export default function UserButton({
                                        size = "md",
                                        showEmail = true,
                                        showMemberSince = true,
-                                   }) {
+                                   }: UserButtonProps) {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
@@ -59,7 +71,7 @@ export default function UserButton({
     };
 
     // Get user initials for avatar fallback
-    const getUserInitials = (name, email) => {
+    const getUserInitials = (name?: string, email?: string) => {
         if (name) {
             return name
                 .split(" ")
@@ -75,7 +87,7 @@ export default function UserButton({
     };
 
     // Format member since date
-    const formatMemberSince = (date) => {
+    const formatMemberSince = (date: string | Date) => {
         return new Intl.DateTimeFormat("en-US", {
             month: "long",
             year: "numeric",
@@ -83,7 +95,7 @@ export default function UserButton({
     };
 
     // Avatar sizes
-    const avatarSizes = {
+    const avatarSizes: Record<"sm" | "md" | "lg", string> = {
         sm: "h-8 w-8",
         md: "h-10 w-10",
         lg: "h-12 w-12",
@@ -96,33 +108,30 @@ export default function UserButton({
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button
-                    variant="ghost"
-                    className={`relative ${avatarSizes[size]} rounded-full p-0 hover:bg-accent`}
-                    disabled={isLoading}
-                >
-                    <Avatar className={avatarSizes[size]}>
-                        <AvatarImage
-                            src={user.image || ""}
-                            alt={user.name || "User avatar"}
-                        />
-                        <AvatarFallback className="bg-primary text-primary-foreground font-medium">
-                            {getUserInitials(user.name, user.email)}
-                        </AvatarFallback>
-                    </Avatar>
-                    {showBadge && (
-                        <Badge
-                            variant={badgeVariant}
-                            className="absolute -bottom-1 -right-1 h-5 px-1 text-xs"
-                        >
-                            {badgeText}
-                        </Badge>
-                    )}
-                </Button>
+            <DropdownMenuTrigger
+                className={`relative flex items-center justify-center ${avatarSizes[size]} rounded-full p-0 hover:bg-accent focus:outline-none`}
+                disabled={isLoading}
+            >
+                <Avatar className={avatarSizes[size]}>
+                    <AvatarImage
+                        src={user.image || ""}
+                        alt={user.name || "User avatar"}
+                    />
+                    <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                        {getUserInitials(user.name, user.email)}
+                    </AvatarFallback>
+                </Avatar>
+                {showBadge && (
+                    <Badge
+                        variant={badgeVariant}
+                        className="absolute -bottom-1 -right-1 h-5 px-1 text-xs"
+                    >
+                        {badgeText}
+                    </Badge>
+                )}
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent className="w-64" align="end" forceMount>
+            <DropdownMenuContent className="w-64" align="end">
                 <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-2">
                         <div className="flex items-center space-x-3">

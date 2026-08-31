@@ -9,9 +9,13 @@ const DeleteChatModel = ({
     isModalOpen,
     setIsModalOpen,
     chatId,
+}: {
+    isModalOpen: boolean;
+    setIsModalOpen: (isOpen: boolean) => void;
+    chatId: string | null;
 }) => {
 
-    const {mutateAsync ,isPending} = useDeleteChat(chatId);
+    const {mutateAsync ,isPending} = useDeleteChat(chatId || "");
 
     const handleDelete = async()=>{
         try {
@@ -20,7 +24,7 @@ const DeleteChatModel = ({
                 setIsModalOpen(false);
         } catch (error) {
               toast.error("Failed to delete Chat");
-      console.error("Failed to delete Chat:", err);
+      console.error("Failed to delete Chat:", error);
         }
     }
 

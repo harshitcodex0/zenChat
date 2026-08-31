@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function run() { const collections = await prisma.knowledgeCollection.findMany(); console.log('Collections:', collections); } run();
