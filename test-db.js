@@ -1,1 +1,1 @@
-const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function run() { const collections = await prisma.knowledgeCollection.findMany(); console.log('Collections:', collections); } run();
+require("dotenv").config(); const { Pool } = require("pg"); const pool = new Pool({ connectionString: process.env.DATABASE_URL }); pool.query("SELECT * FROM message WHERE \"chatId\" = $1 ORDER BY \"createdAt\" ASC", ["cmth90es90004x03kmtitpqrx"]).then(r => { console.log(JSON.stringify(r.rows, null, 2)); pool.end(); });

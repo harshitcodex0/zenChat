@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 
 export async function getCharacters() {
     try {
+        console.log("getCharacters() called");
         const user = await currentUser();
+        console.log("getCharacters() user:", user?.id);
         if (!user) {
             return { success: false, message: "Unauthorized" };
         }

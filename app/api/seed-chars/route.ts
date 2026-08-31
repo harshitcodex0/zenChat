@@ -1,0 +1,1 @@
+import { NextResponse } from "next/server"; import { getCharacters } from "@/modules/characters/actions"; export const dynamic = "force-dynamic"; export async function GET() { const res = await getCharacters(); return NextResponse.json(res); }

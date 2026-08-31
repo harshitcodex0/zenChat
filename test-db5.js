@@ -1,0 +1,1 @@
+require("dotenv").config(); const { Pool } = require("pg"); const pool = new Pool({ connectionString: process.env.DATABASE_URL }); pool.query("SELECT c.id, ck.\"B\" as collection_id FROM chat c LEFT JOIN \"_ChatKnowledge\" ck ON c.id = ck.\"A\" WHERE c.id = $1", ["cmth9ag6l0001cg3kahbi4ok7"]).then(r => { console.log(JSON.stringify(r.rows, null, 2)); pool.end(); });

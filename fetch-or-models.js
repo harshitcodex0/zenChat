@@ -1,0 +1,1 @@
+fetch('https://openrouter.ai/api/v1/models').then(r => r.json()).then(data => { const embs = data.data.filter(m => m.architecture && m.architecture.modality && m.architecture.modality.includes('embed')); console.log(embs.map(m => m.id)); })

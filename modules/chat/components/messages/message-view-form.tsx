@@ -250,6 +250,53 @@ const ChatView = ({
         searchParams,
     ]);
 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [attachedFiles, setAttachedFiles] = useState<{file: File, collectionId: string}[]>([]);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setIsUploading(true);
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+                const { uploadChatAttachment } = await import("@/modules/knowledge/actions");
+                const res = await uploadChatAttachment(formData);
+                if (res.success && res.data?.collectionId) {
+                    const { linkCollectionToChat } = await import("@/modules/chat/actions");
+                    const linkRes = await linkCollectionToChat(chatId, res.data.collectionId);
+                    if (linkRes.success) {
+                        setAttachedFiles(prev => [...prev, { file, collectionId: res.data.collectionId }]);
+                        toast.success("File attached to this chat");
+                    } else {
+                        toast.error(linkRes.message || "Failed to link file to chat");
+                    }
+                } else {
+                    toast.error(res.error || "Failed to upload file");
+                }
+            } catch (error) {
+                console.error("Upload error:", error);
+                toast.error("Failed to attach file");
+            } finally {
+                setIsUploading(false);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            }
+        }
+    };
+
+    const handleRemoveFile = async (collectionId: string) => {
+        setAttachedFiles(prev => prev.filter(f => f.collectionId !== collectionId));
+        try {
+            const { unlinkCollectionFromChat } = await import("@/modules/chat/actions");
+            await unlinkCollectionFromChat(chatId, collectionId);
+        } catch (error) {
+            console.error("Error unlinking file:", error);
+        }
+    };
+
 
     const handleSubmit = async(message:PromptInputMessage)=>{
         const text = message.text?.trim();
@@ -271,6 +318,8 @@ const ChatView = ({
                     }
                 }
             )
+            // Clear attachments from UI after sending
+            setAttachedFiles([]);
         } catch (error) {
             console.error("Send message failed:", error);
             toast.error("Failed to send message");
@@ -348,7 +397,7 @@ const ChatView = ({
 
                     <PromptInputFooter>
                         <PromptInputTools className="flex items-center justify-between gap-2 w-full">
-                            <div className="flex-1">
+                            <div className="flex-1 flex flex-wrap items-center gap-2">
                                 {isModelLoading ? (
                                     <Spinner />
                                 ) : (
@@ -359,6 +408,35 @@ const ChatView = ({
                                         className=""
                                     />
                                 )}
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    className="hidden" 
+                                    onChange={handleFileChange} 
+                                    accept=".txt,.pdf,image/*,video/*"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploading}
+                                    className="h-8 px-2 flex items-center gap-2 text-muted-foreground"
+                                >
+                                    {isUploading ? <Spinner /> : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>}
+                                </Button>
+                                {attachedFiles.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-1 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md max-w-[150px]">
+                                        <span className="truncate">{item.file.name}</span>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => handleRemoveFile(item.collectionId)}
+                                            className="text-muted-foreground hover:text-foreground ml-1"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                             <PromptInputSubmit status={status} onStop={stop} />
                         </PromptInputTools>

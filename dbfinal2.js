@@ -1,0 +1,1 @@
+require("dotenv").config(); const { Pool } = require("pg"); const pool = new Pool({ connectionString: process.env.DATABASE_URL }); pool.query("SELECT id, title, status, \"collectionId\" FROM document LIMIT 10").then(r => { console.log("All docs:", JSON.stringify(r.rows)); pool.end(); }).catch(e => { console.error("Err:", e.message); pool.end(); });

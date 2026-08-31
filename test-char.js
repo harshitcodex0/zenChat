@@ -1,0 +1,1 @@
+const { PrismaClient } = require('./lib/generated/prisma/client'); const prisma = new PrismaClient(); async function run() { const chars = await prisma.character.findMany(); console.log(chars); } run();

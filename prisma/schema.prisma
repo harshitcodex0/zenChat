@@ -25,6 +25,7 @@ model User {
   accounts      Account[]
   chats             Chat[]
   sessions          Session[]
+  integrations      Integration[]
   createdCharacters Character[] @relation("UserCharacters")
   knowledgeCollections KnowledgeCollection[]
 
@@ -200,6 +201,23 @@ enum DocumentType {
   PDF
   IMAGE
   VIDEO
+}
+
+model Integration {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String   // "github", "slack", "notion", etc.
+  accessToken  String?
+  refreshToken String?
+  metadata     Json?    
+  status       String   @default("NOT_CONFIGURED") // CONNECTED, NOT_CONFIGURED
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("integration")
 }
 
 enum DocumentStatus {

@@ -47,8 +47,7 @@ export default function ChatMessageForm({ initialMessage, onMessageChange, selec
         }
     }, [selectedCharacterId]);
 
-    const [attachedCollectionId, setAttachedCollectionId] = useState<string | null>(null);
-    const [attachedFile, setAttachedFile] = useState<File | null>(null);
+    const [attachedFiles, setAttachedFiles] = useState<{file: File, collectionId: string}[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,7 +55,6 @@ export default function ChatMessageForm({ initialMessage, onMessageChange, selec
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setAttachedFile(file);
         setIsUploading(true);
         
         try {
@@ -66,33 +64,41 @@ export default function ChatMessageForm({ initialMessage, onMessageChange, selec
             const res = await uploadChatAttachment(formData);
             
             if (res.success && res.data) {
-                setAttachedCollectionId(res.data.collectionId);
+                setAttachedFiles(prev => [...prev, { file, collectionId: res.data.collectionId }]);
                 toast.success("File attached to knowledge base");
             } else {
                 toast.error(res.error || "Failed to attach file");
-                setAttachedFile(null);
             }
         } catch (error) {
             console.error("Upload error:", error);
             toast.error("Failed to attach file");
-            setAttachedFile(null);
         } finally {
             setIsUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
         }
+    };
+
+    const handleRemoveFile = (collectionId: string) => {
+        setAttachedFiles(prev => prev.filter(f => f.collectionId !== collectionId));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         try {
             e.preventDefault();
+            if (!selectedModel) {
+                toast.error("Please select a model first");
+                return;
+            }
             await mutateAsync({ 
                 content: message, 
-                model: selectedModel, 
+                model: selectedModel || "", 
                 characterId: selectedCharacterId || undefined,
-                knowledgeCollectionId: attachedCollectionId || undefined
+                knowledgeCollectionIds: attachedFiles.length > 0 ? attachedFiles.map(f => f.collectionId) : undefined
             });
             toast.success("Message sent successfully");
-            setAttachedFile(null);
-            setAttachedCollectionId(null);
+            setAttachedFiles([]);
         } catch (error) {
             console.error("Error sending message:", error);
             toast.error("Failed to send message");
@@ -155,8 +161,19 @@ export default function ChatMessageForm({ initialMessage, onMessageChange, selec
                                 className="h-8 px-2 flex items-center gap-2 text-muted-foreground"
                             >
                                 {isUploading ? <Spinner /> : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>}
-                                {attachedFile ? <span className="text-xs truncate max-w-[100px]">{attachedFile.name}</span> : null}
                             </Button>
+                            {attachedFiles.map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-1 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md max-w-[150px]">
+                                    <span className="truncate">{item.file.name}</span>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handleRemoveFile(item.collectionId)}
+                                        className="text-muted-foreground hover:text-foreground ml-1"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
                         </div>
 
                         {/* Submit Button */}

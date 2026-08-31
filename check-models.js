@@ -1,0 +1,1 @@
+fetch('https://openrouter.ai/api/v1/models').then(res => res.json()).then(data => console.log(data.data.filter(m => m.id.includes('embed') || m.architecture?.modality?.includes('embed') || m.id.includes('jina') || m.id.includes('nomic')).map(m => m.id)))

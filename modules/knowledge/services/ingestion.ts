@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { extractDocumentContent } from './extraction';
 import { chunkText } from './chunking';
 import { generateEmbeddings } from './embeddings';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/lib/generated/prisma/client';
 
 import { nanoid } from 'nanoid';
 
@@ -21,28 +21,44 @@ export async function processDocument(documentId: string, buffer: Buffer, mimeTy
         }
 
         // 2. Chunk text
-        const chunks = chunkText(rawText, { maxChunkSize: 1000, overlapSize: 200 });
+        const chunkResults = chunkText(rawText, { maxChunkSize: 1000, overlapSize: 200 });
+        const texts = chunkResults.map(c => c.text);
 
         // 3. Generate Embeddings (batch them to avoid rate limits, or all at once if small enough)
-        const embeddings = await generateEmbeddings(chunks);
+        const embeddings = await generateEmbeddings(texts);
 
         // 4. Save chunks and embeddings
         // We do this in a transaction or individual raw queries because of the Unsupported pgvector type
-        for (let i = 0; i < chunks.length; i++) {
-            const content = chunks[i];
+        for (let i = 0; i < chunkResults.length; i++) {
+            const content = chunkResults[i].text;
+            const metadata = chunkResults[i].metadata;
+            const metadataJson = metadata ? JSON.stringify(metadata) : null;
             const embedding = embeddings[i];
             const embeddingString = `[${embedding.join(',')}]`;
             const chunkId = nanoid();
 
-            await prisma.$executeRaw`
-                INSERT INTO document_chunk ("id", "documentId", "content", "embedding")
-                VALUES (
-                    ${chunkId}, 
-                    ${document.id}, 
-                    ${content}, 
-                    ${embeddingString}::vector
-                )
-            `;
+            if (metadataJson) {
+                await prisma.$executeRaw`
+                    INSERT INTO document_chunk ("id", "documentId", "content", "metadata", "embedding")
+                    VALUES (
+                        ${chunkId}, 
+                        ${document.id}, 
+                        ${content}, 
+                        ${metadataJson}::jsonb,
+                        ${embeddingString}::vector
+                    )
+                `;
+            } else {
+                await prisma.$executeRaw`
+                    INSERT INTO document_chunk ("id", "documentId", "content", "embedding")
+                    VALUES (
+                        ${chunkId}, 
+                        ${document.id}, 
+                        ${content}, 
+                        ${embeddingString}::vector
+                    )
+                `;
+            }
         }
 
         // 5. Update document status
@@ -51,12 +67,21 @@ export async function processDocument(documentId: string, buffer: Buffer, mimeTy
             data: { status: 'PROCESSED' }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Failed to process document ${documentId}:`, error);
+        
+        let errorMessage = "Unknown processing error";
+        if (!process.env.OPENROUTER_API_KEY) {
+            errorMessage = "OpenRouter API key is missing. Please add OPENROUTER_API_KEY to your .env file.";
+        } else if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+
         await prisma.document.update({
             where: { id: documentId },
             data: { status: 'ERROR' }
         });
-        throw error;
+        
+        throw new Error(errorMessage);
     }
 }

@@ -8,14 +8,14 @@ interface IcreateChatWithMessage {
     content: string;
     model: string;
     characterId?: string;
-    knowledgeCollectionId?: string;
+    knowledgeCollectionIds?: string[];
 }
 
 export async function createChatWithMessage({
                                                 content,
                                                 model,
                                                 characterId,
-                                                knowledgeCollectionId,
+                                                knowledgeCollectionIds,
                                             }: IcreateChatWithMessage) {
     try {
         const user = await currentUser();
@@ -32,8 +32,8 @@ export async function createChatWithMessage({
                 model,
                 userId: user.id,
                 characterId: characterId || null,
-                knowledgeCollections: knowledgeCollectionId ? {
-                    connect: { id: knowledgeCollectionId }
+                knowledgeCollections: knowledgeCollectionIds && knowledgeCollectionIds.length > 0 ? {
+                    connect: knowledgeCollectionIds.map(id => ({ id }))
                 } : undefined,
                 messages: {
                     create: {
@@ -56,6 +56,50 @@ export async function createChatWithMessage({
     } catch (error) {
         console.error("Error creating chat:", error);
         return { success: false, message: "Failed to create chat" };
+    }
+}
+
+export async function linkCollectionToChat(chatId: string, collectionId: string) {
+    try {
+        const user = await currentUser();
+        if (!user) return { success: false, message: "Unauthorized" };
+
+        const chat = await prisma.chat.update({
+            where: { id: chatId, userId: user.id },
+            data: {
+                knowledgeCollections: {
+                    connect: { id: collectionId }
+                }
+            }
+        });
+
+        revalidatePath(`/chat/${chatId}`);
+        return { success: true, data: chat };
+    } catch (error) {
+        console.error("Error linking collection:", error);
+        return { success: false, message: "Failed to link collection to chat" };
+    }
+}
+
+export async function unlinkCollectionFromChat(chatId: string, collectionId: string) {
+    try {
+        const user = await currentUser();
+        if (!user) return { success: false, message: "Unauthorized" };
+
+        const chat = await prisma.chat.update({
+            where: { id: chatId, userId: user.id },
+            data: {
+                knowledgeCollections: {
+                    disconnect: { id: collectionId }
+                }
+            }
+        });
+
+        revalidatePath(`/chat/${chatId}`);
+        return { success: true, data: chat };
+    } catch (error) {
+        console.error("Error unlinking collection:", error);
+        return { success: false, message: "Failed to unlink collection from chat" };
     }
 }
 

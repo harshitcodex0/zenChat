@@ -35,7 +35,12 @@ export default function CollectionManager({ collection }: { collection: any }) {
             queryClient.invalidateQueries({ queryKey: ['knowledgeCollections'] });
         },
         onError: (err: any) => toast.error(err.message || "Failed to upload document"),
-        onSettled: () => setIsUploading(false)
+        onSettled: () => {
+            setIsUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
     });
 
     const deleteMutation = useMutation({

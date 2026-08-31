@@ -94,9 +94,9 @@ export async function uploadDocument(collectionId: string, formData: FormData) {
 
     try {
         await processDocument(document.id, buffer, file.type);
-    } catch (e) {
+    } catch (e: any) {
         console.error("Process error:", e);
-        return { success: false, error: "Failed to process document" };
+        return { success: false, message: e.message || "Failed to process document" };
     }
 
     return { success: true, data: document };
@@ -119,19 +119,17 @@ export async function uploadChatAttachment(formData: FormData) {
     const user = await currentUser();
     if (!user) return { success: false, error: "Unauthorized" };
 
-    // Find or create "Chat Attachments" collection
-    let collection = await prisma.knowledgeCollection.findFirst({
-        where: { userId: user.id, name: "Chat Attachments" }
-    });
-
-    if (!collection) {
-        collection = await prisma.knowledgeCollection.create({
-            data: { name: "Chat Attachments", description: "Direct attachments from chats", userId: user.id }
-        });
-    }
-
     const file = formData.get("file") as File;
     if (!file) return { success: false, error: "No file provided" };
+
+    // Create a unique collection for this attachment to prevent cross-chat leaking
+    const collection = await prisma.knowledgeCollection.create({
+        data: { 
+            name: `Chat Attachment: ${file.name}`, 
+            description: "Direct attachment from a chat", 
+            userId: user.id 
+        }
+    });
 
     const storage = new LocalStorageService();
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -155,9 +153,9 @@ export async function uploadChatAttachment(formData: FormData) {
 
     try {
         await processDocument(document.id, buffer, file.type);
-    } catch (e) {
+    } catch (e: any) {
         console.error("Process error:", e);
-        return { success: false, error: "Failed to process document" };
+        return { success: false, message: e.message || "Failed to process document" };
     }
 
     return { success: true, data: { document, collectionId: collection.id } };

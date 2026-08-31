@@ -97,24 +97,21 @@ export function ModelSelector({
     return (
         <>
             <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant="ghost"
+                <PopoverTrigger
                         role="combobox"
                         aria-expanded={open}
                         className={cn(
-                            "h-8 justify-between gap-2 px-2 text-xs hover:bg-accent",
+                            "inline-flex items-center whitespace-nowrap rounded-md font-medium ring-offset-background transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground justify-between gap-2 px-2 text-xs h-8",
                             className
                         )}
                     >
                         <div className="flex items-center gap-1.5 min-w-0">
                             <Sparkles className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             <span className="truncate font-medium">
-                {selectedModel?.name || "Select model"}
-              </span>
+                                {selectedModel?.name || "Select model"}
+                            </span>
                         </div>
                         <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
-                    </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-3xl p-0" align="start">
                     <div className="p-3 border-b">
