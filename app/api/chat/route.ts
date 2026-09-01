@@ -140,10 +140,15 @@ export async function POST(req: NextRequest) {
         }
         // ---------------------
 
+        const { getActiveToolsForUser } = await import('@/modules/mcp/tools');
+        const activeTools = await getActiveToolsForUser(user.id);
+
         const result = streamText({
             model: openRouter.chat(model),
             system: systemPrompt,
             messages: await convertToModelMessages(messages),
+            tools: Object.keys(activeTools).length > 0 ? activeTools : undefined,
+            maxSteps: 5,
         });
 
         result.consumeStream();
@@ -152,7 +157,7 @@ export async function POST(req: NextRequest) {
             sendReasoning: true,
             originalMessages: messages,
             generateMessageId,
-            onFinish: async ({ responseMessage }) => {
+            onFinish: async (event) => {
                 try {
                     const messageToSave:Array<{
                         id?: string;
@@ -179,15 +184,20 @@ export async function POST(req: NextRequest) {
                         }
                     }
 
-                    if (responseMessage?.parts?.length > 0) {
-                        messageToSave.push({
-                            id:responseMessage.id,
-                            chatId,
-                            content: partsToJSON(responseMessage),
-                            messageRole: MessageRole.ASSISTANT,
-                            messageType: "NORMAL",
-                            model,
-                        });
+                    // @ts-ignore - handle newer AI SDK which provides responseMessages for multi-step
+                    const msgs = event.responseMessages || (event.responseMessage ? [event.responseMessage] : []);
+                    
+                    for (const msg of msgs) {
+                        if (msg?.parts?.length > 0) {
+                            messageToSave.push({
+                                id: msg.id || generateMessageId(),
+                                chatId,
+                                content: partsToJSON(msg),
+                                messageRole: MessageRole.ASSISTANT,
+                                messageType: "NORMAL",
+                                model,
+                            });
+                        }
                     }
 
                     if(messageToSave.length > 0){

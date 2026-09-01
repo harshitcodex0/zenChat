@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
+import { IntegrationsDialog } from "@/modules/mcp/components/integrations-dialog";
 import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useGetChatById } from "../../hooks/use-chats";
 import { useAIModels } from "../../hooks/use-ai-models";
@@ -133,6 +134,21 @@ function MessagePart({ part, messageId, partIndex, role , isStreaming }:{
         return (
             <div key={key} className="my-4 text-gray-500">
                 <hr className="border-gray-300" />
+            </div>
+        );
+    }
+
+    if (part.type === "tool-invocation") {
+        const invocation = part.toolInvocation as any;
+        return (
+            <div key={key} className="my-2 p-3 bg-secondary/50 rounded-lg border flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground font-medium">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                    <span>Using tool: {invocation?.toolName}</span>
+                </div>
+                <div className="font-mono text-xs text-muted-foreground opacity-80 break-all">
+                    {JSON.stringify(invocation?.args)}
+                </div>
             </div>
         );
     }
@@ -425,6 +441,18 @@ const ChatView = ({
                                 >
                                     {isUploading ? <Spinner /> : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>}
                                 </Button>
+                                
+                                <IntegrationsDialog>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 px-2 flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                                        title="Manage Integrations"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>
+                                    </Button>
+                                </IntegrationsDialog>
                                 {attachedFiles.map((item, idx) => (
                                     <div key={idx} className="flex items-center gap-1 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md max-w-[150px]">
                                         <span className="truncate">{item.file.name}</span>

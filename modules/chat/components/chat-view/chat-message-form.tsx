@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { IntegrationsDialog } from "@/modules/mcp/components/integrations-dialog";
 
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
@@ -162,6 +163,18 @@ export default function ChatMessageForm({ initialMessage, onMessageChange, selec
                             >
                                 {isUploading ? <Spinner /> : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>}
                             </Button>
+                            
+                            <IntegrationsDialog>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2 flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                                    title="Manage Integrations"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>
+                                </Button>
+                            </IntegrationsDialog>
                             {attachedFiles.map((item, idx) => (
                                 <div key={idx} className="flex items-center gap-1 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md max-w-[150px]">
                                     <span className="truncate">{item.file.name}</span>
