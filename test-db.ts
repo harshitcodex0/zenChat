@@ -1,1 +1,1 @@
-import { db } from './lib/db'; async function main() { const msgs = await db.message.findMany({ orderBy: { createdAt: 'desc' }, take: 4 }); console.log(JSON.stringify(msgs, null, 2)); } main().catch(console.error).finally(() => process.exit(0));
+import { prisma } from './lib/db'; async function main() { const msgs = await prisma.message.findMany({ orderBy: { createdAt: 'desc' }, take: 2 }); console.log(JSON.stringify(msgs, null, 2)); } main().catch(console.error).finally(() => process.exit(0));

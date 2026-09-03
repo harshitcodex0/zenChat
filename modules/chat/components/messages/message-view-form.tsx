@@ -130,24 +130,40 @@ function MessagePart({ part, messageId, partIndex, role , isStreaming }:{
         );
     }
 
-    if (part.type === "step-start" && partIndex > 0) {
-        return (
-            <div key={key} className="my-4 text-gray-500">
-                <hr className="border-gray-300" />
-            </div>
-        );
+    if (part.type === "step-start") {
+        return null;
     }
 
-    if (part.type === "tool-invocation") {
-        const invocation = part.toolInvocation as any;
+    if (part.type === "tool-call" || part.type === "tool-invocation") {
+        const invocation = (part.type === "tool-call" ? part : part.toolInvocation) as any;
         return (
             <div key={key} className="my-2 p-3 bg-secondary/50 rounded-lg border flex flex-col gap-1 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground font-medium">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                    <span>Using tool: {invocation?.toolName}</span>
+                    <span>Using tool: {invocation.toolName}</span>
                 </div>
                 <div className="font-mono text-xs text-muted-foreground opacity-80 break-all">
-                    {JSON.stringify(invocation?.args)}
+                    {JSON.stringify(invocation.args)}
+                </div>
+                {'result' in invocation && (
+                    <div className="mt-2 text-xs text-muted-foreground border-t pt-2 max-h-40 overflow-y-auto">
+                        {typeof invocation.result === 'string' ? invocation.result : JSON.stringify(invocation.result)}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (part.type === "tool-result") {
+        const invocation = part as any;
+        return (
+            <div key={key} className="my-2 p-3 bg-secondary/50 rounded-lg border flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground font-medium">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                    <span>Tool finished: {invocation.toolName}</span>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground border-t pt-2 max-h-40 overflow-y-auto">
+                    {typeof invocation.result === 'string' ? invocation.result : JSON.stringify(invocation.result)}
                 </div>
             </div>
         );
@@ -369,7 +385,7 @@ const ChatView = ({
                         ) : (
                             messages.map((message) => (
                                 <Fragment key={message.id}>
-                                    {message.parts.map((part, i) => (
+                                    {message.parts?.map((part, i) => (
                                         <MessagePart
                                             key={`${message.id}-${i}`}
                                             part={part as MessagePartShape}
@@ -379,7 +395,7 @@ const ChatView = ({
                                             isStreaming={
                                                 isBuzy &&
                                                 message === messages.at(-1) &&
-                                                i === message.parts.length - 1
+                                                i === message.parts!.length - 1
                                             }
                                         />
                                     ))}

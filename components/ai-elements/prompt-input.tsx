@@ -1155,7 +1155,7 @@ export const PromptInputButton = ({
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipTrigger render={<button />}>{button}</TooltipTrigger>
       <TooltipContent side={side}>
         {tooltipContent}
         {shortcut && (
@@ -1178,7 +1178,7 @@ export const PromptInputActionMenuTrigger = ({
   children,
   ...props
 }: PromptInputActionMenuTriggerProps) => (
-  <DropdownMenuTrigger asChild>
+  <DropdownMenuTrigger render={<button />}>
     <PromptInputButton className={className} {...props}>
       {children ?? <PlusIcon className="size-4" />}
     </PromptInputButton>

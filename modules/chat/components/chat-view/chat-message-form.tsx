@@ -19,13 +19,13 @@ export default function ChatMessageForm({ initialMessage, onMessageChange, selec
     // Compute the actual selected model
     let selectedModel = userSelectedModel;
     if (!selectedModel && models?.models && models.models.length > 0) {
-        // Find GLM 5.2 Flash (or similar name/id), fallback to first model
-        const glmModel = models.models.find((m: { id: string, name: string }) => 
-            (m.name.toLowerCase().includes("glm") && m.name.toLowerCase().includes("5.2") && m.name.toLowerCase().includes("flash")) ||
-            m.id.toLowerCase().includes("glm-5.2-flash") ||
-            (m.name.toLowerCase().includes("glm") && m.name.toLowerCase().includes("flash")) // fallback to any GLM flash
+        // Find Gemini 3.7 Flash, fallback to Gemini Flash, then first model
+        const geminiModel = models.models.find((m: { id: string, name: string }) => 
+            m.name.toLowerCase().includes("gemini") && m.name.toLowerCase().includes("3.7") && m.name.toLowerCase().includes("flash")
+        ) || models.models.find((m: { id: string, name: string }) => 
+            m.name.toLowerCase().includes("gemini") && m.name.toLowerCase().includes("flash")
         );
-        selectedModel = glmModel?.id || models.models[0].id;
+        selectedModel = geminiModel?.id || models.models[0].id;
     }
 
     const setSelectedModel = (id: string) => setUserSelectedModel(id);

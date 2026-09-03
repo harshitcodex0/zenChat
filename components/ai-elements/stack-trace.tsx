@@ -216,7 +216,7 @@ export const StackTraceHeader = memo(
 
     return (
       <Collapsible onOpenChange={setIsOpen} open={isOpen}>
-        <CollapsibleTrigger asChild {...props}>
+        <CollapsibleTrigger render={<button />} {...props}>
           <div
             className={cn(
               "flex w-full cursor-pointer items-center gap-3 p-3 text-left transition-colors hover:bg-muted/50",

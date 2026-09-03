@@ -34,7 +34,23 @@ export function generateSystemPrompt(character?: {
     behaviorInstructions?: string | null;
     systemPrompt?: string | null;
 } | null) {
-    let prompt = BASE_SYSTEM_PROMPT;
+    // Always inject the real current date/time so the model never guesses wrong
+    const now = new Date();
+    const dateString = now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'UTC',
+    });
+    const timeString = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'UTC',
+        timeZoneName: 'short',
+    });
+
+    let prompt = BASE_SYSTEM_PROMPT + `\n---\nCURRENT DATE & TIME: ${dateString} at ${timeString}\nAlways use this date as "today" when responding. Do NOT rely on your training data cutoff date.\n`;
 
     if (!character) {
         prompt += `

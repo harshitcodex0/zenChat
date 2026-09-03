@@ -1,4 +1,4 @@
-import { convertToModelMessages, streamText , createIdGenerator , type UIMessage } from "ai";
+import { convertToModelMessages, streamText , createIdGenerator , type UIMessage , stepCountIs } from "ai";
 import { generateSystemPrompt } from "@/lib/prompt";
 import { prisma } from "@/lib/db";
 import { MessageRole } from "@/lib/generated/prisma/enums";
@@ -16,9 +16,13 @@ const generateMessageId = createIdGenerator({prefix:"msg" , size:16})
 /**
  * Convert message parts to JSON string for DB storage
  */
-function partsToJSON(message: { parts?: unknown; content?: string }) {
+function partsToJSON(message: { parts?: unknown; content?: string | any[] }) {
     if (Array.isArray(message.parts)) {
         return JSON.stringify(message.parts);
+    }
+    if (Array.isArray(message.content)) {
+        // AI SDK Core returns parts directly in content array
+        return JSON.stringify(message.content);
     }
     return JSON.stringify([{ type: "text", text: message.content ?? "" }]);
 }
@@ -148,10 +152,8 @@ export async function POST(req: NextRequest) {
             system: systemPrompt,
             messages: await convertToModelMessages(messages),
             tools: Object.keys(activeTools).length > 0 ? activeTools : undefined,
-            maxSteps: 5,
+            stopWhen: stepCountIs(5),
         });
-
-        result.consumeStream();
 
         return result.toUIMessageStreamResponse({
             sendReasoning: true,
@@ -188,7 +190,7 @@ export async function POST(req: NextRequest) {
                     const msgs = event.responseMessages || (event.responseMessage ? [event.responseMessage] : []);
                     
                     for (const msg of msgs) {
-                        if (msg?.parts?.length > 0) {
+                        if (msg?.parts?.length > 0 || (Array.isArray(msg?.content) && msg.content.length > 0) || typeof msg?.content === 'string') {
                             messageToSave.push({
                                 id: msg.id || generateMessageId(),
                                 chatId,
